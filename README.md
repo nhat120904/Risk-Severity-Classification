@@ -8,37 +8,11 @@ Extract deficiencies from a RightShip inspection PDF and classify risk (High/Med
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+# Create your env file (see Environment below)
+# cp .env.example .env
 ```
 
-## Usage
-
-Place files:
-- `data/sample/3._Risk_Severity.xlsx`
-- `data/new/4._New_Inspection_Report.pdf`
-
-Build index:
-```bash
-python -m rsrisk.cli build-index \
-  --labels-xlsx data/sample/3._Risk_Severity.xlsx \
-  --out ./.cache/rsrisk_index.faiss
-```
-
-Predict on new report:
-```bash
-python -m rsrisk.cli predict \
-  --pdf data/new/4._New_Inspection_Report.pdf \
-  --index ./.cache/rsrisk_index.faiss \
-  --out outputs/new_report_predictions.csv
-```
-
-Evaluate on sample (optional):
-```bash
-python -m rsrisk.cli eval \
-  --sample-pdf data/sample/2._Sample_Inspection_Report.pdf \
-  --labels-xlsx data/sample/3._Risk_Severity.xlsx \
-  --index ./.cache/rsrisk_index.faiss
-```
+ 
 ## API + Web Demo
 
 Start the FastAPI server:
@@ -47,11 +21,29 @@ Start the FastAPI server:
 ./scripts/serve_api.sh
 ```
 
-Open your browser to `http://localhost:8000` to see a simple upload form. Upload a PDF inspection report to receive JSON with one item per extracted deficiency including `risk_llm`, `risk_final`, and `rationale`.
+API base: `http://localhost:8000`
+
+Endpoints:
+- `GET /v1/health` → `{ "status": "ok" }`
+- `POST /v1/classify` (multipart form, field `pdf`) → JSON with items: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`, `evidence`.
+  - Query params: `model`, `use_rag` (true/false), `embed_model`, `extract_model`, `classify_model`, `excel` (true to return an Excel file instead of JSON).
+
+Example (JSON):
+```bash
+curl -s -F pdf=@data/new/4._New_Inspection_Report.pdf \
+  "http://localhost:8000/v1/classify?use_rag=true" | jq .
+```
+
+Example (Excel download):
+```bash
+curl -L -o outputs/new_report_predictions.xlsx \
+  -F pdf=@data/new/4._New_Inspection_Report.pdf \
+  "http://localhost:8000/v1/classify?excel=true"
+```
 
 Notes:
-- The server will look for an existing FAISS index at `./.cache/rsrisk_index.faiss`. If not found, it will auto-build an index from `data/sample/2._Sample_Inspection_Report.pdf` + `data/sample/3._Risk_Severity.xlsx` if present.
-- Ensure OpenAI environment variables are set (see `.env.example`).
+- The server keeps an index per embedding model at `./.cache/index__{embed_model}`. If not found, it auto-builds from `data/sample/2._Sample_Inspection_Report.pdf` + `data/sample/3._Risk_Severity.xlsx` when present.
+- Ensure OpenAI environment variables are set (see Environment below).
 
 ## Gradio UI (table output)
 
@@ -67,4 +59,37 @@ Prerequisite: the FastAPI server must be running (the Gradio UI calls the API un
 ./scripts/serve_api.sh
 ```
 
-Then open `http://localhost:7860`, upload a PDF, and you will see a table of deficiencies with columns: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`.
+Then open `http://localhost:7860`, upload a PDF, and you will see a table of deficiencies with columns: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`, `evidence`. A downloadable Excel with `Deficiency`/`Risk` is also produced in `outputs/`.
+
+Config for UI:
+- `RSRISK_API_BASE` (default `http://localhost:8000`)
+- `UI_MODEL_CHOICES` (comma-separated, defaults to `gpt-5,gpt-5-mini,gpt-5-nano`)
+- `EMBED_MODEL` (e.g., `text-embedding-3-large`)
+
+## Environment
+
+Create `.env` in the project root and set at least:
+
+```
+OPENAI_API_KEY=sk-...
+# Optional
+OPENAI_MODEL=gpt-4o-mini
+EMBED_MODEL=text-embedding-3-large
+UI_MODEL_CHOICES=gpt-4.1,gpt-4.1-mini,gpt-5,gpt-5-mini,gpt-5-nano
+
+# Optional: Enable LangSmith tracing
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT="your LangSmith endpoint"
+LANGSMITH_API_KEY="your LangSmith API key"
+LANGSMITH_PROJECT="your LangSmith project name"
+
+# If using Azure OpenAI, also set as needed:
+# OPENAI_API_TYPE=azure
+# OPENAI_API_BASE=...
+# OPENAI_API_VERSION=...
+# OPENAI_DEPLOYMENT_NAME=...
+```
+
+The scripts export `PYTHONPATH=.` so running from source works without installation.
+
+

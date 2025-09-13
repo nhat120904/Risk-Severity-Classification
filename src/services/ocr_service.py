@@ -35,7 +35,7 @@ def _image_to_data_url(img: Image.Image) -> str:
 	return f"data:image/png;base64,{b64}"
 
 
-def load_pdf_text(path: str | Path) -> str:
+def load_pdf_text(path: str | Path, model_name: str | None = None) -> str:
 	"""Load text from a PDF. If no extractable text (scanned PDF), fall back to LLM OCR.
 
 	Primary extraction uses PyMuPDF via LangChain. If pages contain no text,
@@ -51,7 +51,7 @@ def load_pdf_text(path: str | Path) -> str:
 	if not images:
 		return ""
 
-	llm = get_chat_llm()
+	llm = get_chat_llm(model=model_name)
 	page_texts: list[str] = []
 	for img in images:
 		data_url = _image_to_data_url(img)

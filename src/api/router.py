@@ -72,7 +72,7 @@ async def classify_pdf(
         raise HTTPException(status_code=500, detail=str(e))
 
     try:
-        text = load_pdf_text(str(tmp_path))
+        text = load_pdf_text(str(tmp_path), model_name=model)
         recs = extract_records(text, model_name=(extract_model or model), provider=("openai"))
         rows: list[ClassifiedItem] = []
         for rec in recs:
@@ -89,7 +89,8 @@ async def classify_pdf(
                 evidence=out.evidence,
             ))
         if excel:
-            risks = [r.risk_final for r in rows]
+            # Ensure we export plain string labels ("High", "Medium", "Low") not Enum reprs ("Risk.High")
+            risks = [getattr(r.risk_final, "value", str(r.risk_final)) for r in rows]
             df = pd.DataFrame({
                 "Deficiency": list(range(1, len(risks) + 1)),
                 "Risk": risks,
