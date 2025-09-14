@@ -26,9 +26,9 @@ API base: `http://localhost:8000`
 Endpoints:
 - `GET /v1/health` → `{ "status": "ok" }`
 - `POST /v1/classify` (multipart form, field `pdf`) → JSON with items: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`, `evidence`.
-  - Query params: `model`, `use_rag` (true/false), `embed_model`, `extract_model`, `classify_model`, `excel` (true to return an Excel file instead of JSON).
+  - Query params: `model`, `use_rag` (true/false), `embed_model`, `excel` (true to return an Excel file instead of JSON).
 
-Example (JSON):
+Example (JSON response):
 ```bash
 curl -s -F pdf=@data/new/4._New_Inspection_Report.pdf \
   "http://localhost:8000/v1/classify?use_rag=true" | jq .
@@ -63,7 +63,7 @@ Then open `http://localhost:7860`, upload a PDF, and you will see a table of def
 
 Config for UI:
 - `RSRISK_API_BASE` (default `http://localhost:8000`)
-- `UI_MODEL_CHOICES` (comma-separated, defaults to `gpt-5,gpt-5-mini,gpt-5-nano`)
+- `UI_MODEL_CHOICES` (comma-separated, defaults to `gpt-4.1,gpt-4.1-mini,gpt-5,gpt-5-mini,gpt-5-nano`)
 - `EMBED_MODEL` (e.g., `text-embedding-3-large`)
 
 ## Environment
@@ -90,6 +90,29 @@ LANGSMITH_PROJECT="your LangSmith project name"
 # OPENAI_DEPLOYMENT_NAME=...
 ```
 
-The scripts export `PYTHONPATH=.` so running from source works without installation.
+## Evaluation
 
+Run the evaluation script to classify the provided sample PDF and compare predictions against the true labels. It prints macro metrics and saves per-item predictions.
+
+Prerequisites:
+- Activate the virtualenv and install deps (see Installation)
+- Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, `EMBED_MODEL`)
+
+Quick start:
+```bash
+source .venv/bin/activate
+python scripts/evaluate_sample.py
+```
+
+Options:
+```bash
+python scripts/evaluate_sample.py \
+  --pdf data/sample/2._Sample_Inspection_Report.pdf \
+  --labels data/sample/3._Risk_Severity.xlsx \
+  --no-rag \
+  --model gpt-4.1-mini
+```
+- `--pdf`/`--labels`: override input paths
+- `--no-rag`: disable RAG few-shot examples
+- `--model`: default model for OCR/extraction/classification
 

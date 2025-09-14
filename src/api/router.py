@@ -45,8 +45,6 @@ async def classify_pdf(
     model: str | None = Query(default=None),
     use_rag: bool | None = Query(default=None, description="Use RAG few-shot examples"),
     embed_model: str | None = Query(default=None, description="Embedding model for vector index"),
-    extract_model: str | None = Query(default=None, description="LLM model for extraction"),
-    classify_model: str | None = Query(default=None, description="LLM model for classification"),
     excel: bool | None = Query(default=False, description="Return Excel file (Deficiency/Risk) instead of JSON"),
 ) -> ClassifyResponse | StreamingResponse:
     if not pdf.filename or not pdf.filename.lower().endswith(".pdf"):
@@ -73,10 +71,10 @@ async def classify_pdf(
 
     try:
         text = load_pdf_text(str(tmp_path), model_name=model)
-        recs = extract_records(text, model_name=(extract_model or model), provider=("openai"))
+        recs = extract_records(text, model_name=model, provider=("openai"))
         rows: list[ClassifiedItem] = []
         for rec in recs:
-            out = classify_record(rec, index, model_name=(classify_model or model), provider=("openai"), use_rag=use_rag)
+            out = classify_record(rec, index, model_name=model, provider=("openai"), use_rag=use_rag)
             final = apply_guardrails(rec, out.risk)
             rows.append(ClassifiedItem(
                 deficiency=rec.deficiency,
