@@ -94,13 +94,8 @@ LANGSMITH_PROJECT="your LangSmith project name"
 
 Run the evaluation script to classify the provided sample PDF and compare predictions against the true labels. It prints macro metrics and saves per-item predictions.
 
-Prerequisites:
-- Activate the virtualenv and install deps (see Installation)
-- Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, `EMBED_MODEL`)
-
 Quick start:
 ```bash
-source .venv/bin/activate
 python scripts/evaluate_sample.py
 ```
 

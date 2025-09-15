@@ -133,7 +133,7 @@ def classify_record(
     if use_rag_examples and index is not None:
         retriever = index.as_retriever(
             search_type="similarity_score_threshold",
-            search_kwargs={"k": k, "score_threshold": 0.25},
+            search_kwargs={"k": k, "score_threshold": 0.3},
         )
         q = f"DEFICIENCY: {rec.deficiency}\nROOT_CAUSE: {rec.root_cause}"
         docs = retriever.invoke(q) or []
