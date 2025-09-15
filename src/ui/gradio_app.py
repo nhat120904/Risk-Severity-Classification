@@ -62,12 +62,21 @@ def classify(
         params["model"] = model_name
     if embed_model:
         params["embed_model"] = embed_model
-    with open(pdf_path, "rb") as f:
-        files = {"pdf": (Path(pdf_path).name, f, "application/pdf")}
-        resp = requests.post(url, files=files, params=params, timeout=180)
-    resp.raise_for_status()
-    data = resp.json(); items = data.get("items", [])
-    df = pd.DataFrame(items)
+    try:
+        with open(pdf_path, "rb") as f:
+            files = {"pdf": (Path(pdf_path).name, f, "application/pdf")}
+            resp = requests.post(url, files=files, params=params, timeout=180)
+        resp.raise_for_status()
+        data = resp.json(); items = data.get("items", [])
+        df = pd.DataFrame(items)
+        notice = data.get("notice") or ""
+    except requests.HTTPError as e:
+        try:
+            err = e.response.json()
+            msg = err.get("detail") or str(e)
+        except Exception:
+            msg = str(e)
+        return pd.DataFrame(), None, f"⚠️ {msg}"
 
     # Create Excel locally from JSON results (use final risk labels)
     out_dir = Path("outputs"); out_dir.mkdir(exist_ok=True)
@@ -83,7 +92,7 @@ def classify(
         print("Error creating Excel file: ", e)
         # Fallback: dump all rows to Excel if structure differs
         df.to_excel(out_path, index=False)
-    return df, str(out_path)
+    return df, str(out_path), notice
 
 
 with gr.Blocks(title="RightShip Risk Classifier", css=CUSTOM_CSS) as demo:
@@ -128,7 +137,7 @@ with gr.Blocks(title="RightShip Risk Classifier", css=CUSTOM_CSS) as demo:
             use_rag_in,
             embed_model_in,
         ],
-        outputs=[out, gr.File(label="Download Output")],
+        outputs=[out, gr.File(label="Download Output"), gr.Markdown(label="Notice")],
     )
 
 

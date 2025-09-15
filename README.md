@@ -25,7 +25,7 @@ API base: `http://localhost:8000`
 
 Endpoints:
 - `GET /v1/health` → `{ "status": "ok" }`
-- `POST /v1/classify` (multipart form, field `pdf`) → JSON with items: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`, `evidence`.
+- `POST /v1/classify` (multipart form, field `pdf`) → JSON with items: `deficiency`, `root_cause`, `corrective`, `preventive`, `risk_llm`, `risk_final`, `rationale`, `evidence`, plus `rag_used` and an optional `notice` message.
   - Query params: `model`, `use_rag` (true/false), `embed_model`, `excel` (true to return an Excel file instead of JSON).
 
 Example (JSON response):
@@ -43,7 +43,21 @@ curl -L -o outputs/new_report_predictions.xlsx \
 
 Notes:
 - The server keeps an index per embedding model at `./.cache/index__{embed_model}`. If not found, it auto-builds from `data/sample/2._Sample_Inspection_Report.pdf` + `data/sample/3._Risk_Severity.xlsx` when present.
+- If no index and no sample data are available, the API will proceed without RAG (few-shot examples) by default and include a `notice` in the response. If you explicitly set `use_rag=true`, the API returns HTTP 400 with guidance.
 - Ensure OpenAI environment variables are set (see Environment below).
+
+## Sample Data and Vector Index
+
+To enable RAG examples, place the following files:
+
+- `data/sample/2._Sample_Inspection_Report.pdf`
+- `data/sample/3._Risk_Severity.xlsx`
+
+On first request, an index will be created at `./.cache/index__{embed_model}`. Subsequent requests reuse it.
+
+Alternatively, you can pre-create an index by running a classification once with the sample files present, or by writing your own builder that calls `build_index_from_sample(pdf_path, labels_xlsx, embed_model)` and saves via `save_index(vs, ".cache/index__{embed_model}")`.
+
+Without these files or an existing index, the service will still work, but `rag_used=false` and the UI will show a notice indicating that RAG is unavailable.
 
 ## Gradio UI (table output)
 

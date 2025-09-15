@@ -23,5 +23,7 @@ class ClassifiedItem(BaseModel):
 class ClassifyResponse(BaseModel):
     count: int
     items: List[ClassifiedItem]
+    rag_used: bool | None = None
+    notice: str | None = None
 
 

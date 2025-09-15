@@ -55,6 +55,9 @@ async def classify_pdf(
     try:
         em = embed_model or settings.embed_model
         index_path = _index_dir_for_embed_model(em)
+        notice: str | None = None
+        # Determine effective RAG usage based on query or settings
+        effective_use_rag = settings.use_rag_examples if use_rag is None else use_rag
         if index_path.exists():
             index = load_index(str(index_path), embed_model=em)
         else:
@@ -63,7 +66,21 @@ async def classify_pdf(
                 save_index(vs, str(index_path))
                 index = vs
             else:
-                raise RuntimeError("Vector index not found and sample data missing. Provide an index or sample data.")
+                # Graceful fallback: proceed without RAG examples if not explicitly requested
+                if effective_use_rag is True:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "RAG examples requested but no vector index found and sample files are missing. "
+                            "Either provide an index (/.cache/index__*) or add data/sample files."
+                        ),
+                    )
+                index = None
+                effective_use_rag = False
+                notice = (
+                    "RAG examples unavailable: no vector index found and no sample data present. "
+                    "Proceeding without RAG examples."
+                )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -98,7 +115,8 @@ async def classify_pdf(
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 headers={"Content-Disposition": f"attachment; filename=\"{filename}\""},
             )
-        return ClassifyResponse(count=len(rows), items=rows)
+        rag_used = bool(index is not None and effective_use_rag)
+        return ClassifyResponse(count=len(rows), items=rows, rag_used=rag_used, notice=notice)
     finally:
         try:
             if tmp_path.exists():
