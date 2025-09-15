@@ -109,10 +109,10 @@ Options:
 python scripts/evaluate_sample.py \
   --pdf data/sample/2._Sample_Inspection_Report.pdf \
   --labels data/sample/3._Risk_Severity.xlsx \
-  --no-rag \
+  --rag \
   --model gpt-4.1-mini
 ```
 - `--pdf`/`--labels`: override input paths
-- `--no-rag`: disable RAG few-shot examples
+- `--rag`: use RAG few-shot examples
 - `--model`: default model for OCR/extraction/classification
 

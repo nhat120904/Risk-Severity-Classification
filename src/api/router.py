@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import io
-import json
 import uuid
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 
 from src.core.config import settings
 from src.api.schemas import HealthResponse, ClassifyResponse, ClassifiedItem

@@ -23,7 +23,7 @@ DEFAULT_PDF = REPO_ROOT / "data/sample/2._Sample_Inspection_Report.pdf"
 DEFAULT_XLSX = REPO_ROOT / "data/sample/3._Risk_Severity.xlsx"
 
 
-def run_eval(pdf_path: Path, labels_xlsx: Path, use_rag: bool = True, model: str | None = None) -> int:
+def run_eval(pdf_path: Path, labels_xlsx: Path, use_rag: bool = False, model: str | None = None) -> int:
     if not pdf_path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
     if not labels_xlsx.exists():
@@ -92,11 +92,11 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate risk classification on the sample PDF vs Excel labels.")
     parser.add_argument("--pdf", type=str, default=str(DEFAULT_PDF), help="Path to sample PDF")
     parser.add_argument("--labels", type=str, default=str(DEFAULT_XLSX), help="Path to labels Excel")
-    parser.add_argument("--no-rag", action="store_true", help="Disable RAG few-shot examples")
+    parser.add_argument("--rag", action="store_true", help="Enable RAG few-shot examples")
     parser.add_argument("--model", type=str, default=None, help="OpenAI model name for OCR/extraction/classification")
     args = parser.parse_args()
 
-    use_rag = not args.no_rag
+    use_rag = bool(args.rag)
     return_code = run_eval(Path(args.pdf), Path(args.labels), use_rag=use_rag, model=args.model)
     raise SystemExit(return_code)
 

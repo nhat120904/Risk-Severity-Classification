@@ -17,7 +17,7 @@ DEFINITIONS = (
 )
 
 DECISION_RULES = """
-RISK DECISION RULES (apply in order; first matching rule wins):
+DECISION RULES (apply in order; first match wins):
 
 1) HIGH if any of the following are affected or plausibly impaired:
    - Firefighting or Life-Saving Appliances (LSA): extinguishers, rescue boats, liferafts, SCBA, alarms.
@@ -25,7 +25,7 @@ RISK DECISION RULES (apply in order; first matching rule wins):
    - Pollution prevention/critical statutory (MARPOL/IOPP/ISPS/ISM when safety is jeopardized; expired/invalid critical certs).
    - Structural or watertight integrity; navigation safety equipment with safety impact.
    - Systemic failure leading to immediate risk (repeated, widespread, or during operations).
-   When unsure between High vs Medium on life-safety/pollution, choose HIGH.
+   When unsure between High vs Medium on life-safety/pollution, choose HIGH. Evidence must reference at least one concrete item above.
 
 2) MEDIUM if:
    - Process/procedure/training/records weaknesses (e.g., logbook, certificate filing) without immediate safety/pollution impact.
@@ -37,21 +37,14 @@ RISK DECISION RULES (apply in order; first matching rule wins):
    - Isolated record-keeping/clerical items with no operational consequence and already corrected.
 
 TIE-BREAKERS:
-- Favor HIGH for life-safety/pollution; otherwise favor MEDIUM over LOW when unsure.
-- “Seriously rusted” on LSA/firefighting => HIGH (possible failure in emergency).
-- Certificate mismatch but valid/in-use cert exists and safety unaffected => MEDIUM.
+- Favor HIGH for life-safety/pollution-critical items.
 - Missed drill entry but promptly corrected/trained => usually LOW if isolated.
-
-OUTPUT DISCIPLINE:
-- Return strict JSON with keys: risk, rationale, evidence.
-- rationale: ≤30 words, concrete reason linked to the rules.
-- evidence: 1–3 verbatim quotes from the NEW RECORD (short spans).
-- No markdown, no extra keys, no explanations.
+- Do NOT choose HIGH unless the evidence explicitly names a life-safety/pollution-critical item per Rule 1.
 """
 
 CLASSIFY_HEADER = (
     "You are an AI risk assessor for RightShip. Classify ship inspection DEFICIENCIES into High/Medium/Low.\n\n"
-    "DEFINITIONS:\n{definitions}\n\n"
+    "RISK DEFINITIONS:\n{definitions}\n\n"
     "{decision_rules}\n\n"
 )
 
@@ -63,11 +56,13 @@ CLASSIFY_TAIL = (
     "INSTRUCTIONS:\n"
     "- Read only the NEW RECORD content below.\n"
     "- Apply the DECISION RULES strictly and be conservative for life-safety/pollution.\n"
-    "- Output JSON ONLY with keys: risk, rationale, evidence (list of short quotes).\n"
-    "- Keep rationale ≤30 words; be specific; no step-by-step reasoning.\n"
-    "- Evidence must be verbatim spans from the NEW RECORD (1–3 items).\n\n"
+    "OUTPUT DISCIPLINE:\n"
+    "- Return strict JSON with keys: risk, rationale, evidence.\n"
+    "- rationale: ≤30 words, cite the rule briefly.\n"
+    "- evidence: 1–3 verbatim spans from the NEW RECORD (short quotes).\n"
+    "- No markdown, no extra keys, no explanations.\n\n"
     "NEW RECORD:\n{record}\n\n"
-    "JSON SCHEMA REMINDER (do not include types in output):\n"
+    "JSON SCHEMA REMINDER:\n"
     '{{"risk":"High|Medium|Low","rationale":"short","evidence":["quote1","quote2"]}}'
 )
 
@@ -136,7 +131,10 @@ def classify_record(
     record_txt = _build_record_text(rec)
 
     if use_rag_examples and index is not None:
-        retriever = index.as_retriever(search_kwargs={"k": k})
+        retriever = index.as_retriever(
+            search_type="similarity_score_threshold",
+            search_kwargs={"k": k, "score_threshold": 0.25},
+        )
         q = f"DEFICIENCY: {rec.deficiency}\nROOT_CAUSE: {rec.root_cause}"
         docs = retriever.invoke(q) or []
         examples_block = _examples_text(docs) if docs else ""

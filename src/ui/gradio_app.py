@@ -95,7 +95,7 @@ with gr.Blocks(title="RightShip Risk Classifier", css=CUSTOM_CSS) as demo:
             choices=MODEL_CHOICES,
             value=(MODEL_CHOICES[0] if MODEL_CHOICES else None),
         )
-        use_rag_in = gr.Checkbox(label="Use RAG examples", value=True)
+        use_rag_in = gr.Checkbox(label="Use RAG examples", value=False)
         embed_model_in = gr.Dropdown(
             label="Embedding Model",
             choices=[
